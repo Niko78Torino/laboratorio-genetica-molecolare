@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio di Genetica Molecolare Interattivo</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8268426852108056"
+     crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .codon-highlight {
+            background-color: #fef08a; /* Giallo per evidenziare */
+            border-radius: 4px;
+            padding: 1px 3px;
+            transition: background-color 0.3s;
+        }
+        .codon-table-cell {
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+        .codon-table-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .codon-table-highlight {
+            background-color: #a5f3fc !important; /* Ciano per evidenziare */
+            transform: scale(1.08);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .protein-amino-acid {
+            cursor: pointer;
+            font-weight: 500;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .protein-amino-acid:hover {
+            background-color: #e0e7ff;
+        }
+        #amino-acid-modal {
+            transition: opacity 0.3s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .lang-btn.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- MODAL PER INFO AMMINOACIDI -->
+    <div id="amino-acid-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50" onclick="closeModal()">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full relative" onclick="event.stopPropagation()">
+            <h3 id="modal-title" class="text-2xl font-bold mb-2 text-gray-800"></h3>
+            <p id="modal-abbr" class="text-sm text-gray-500 mb-4" data-lang-prefix="modalAbbr"></p>
+            <p id="modal-property" class="text-lg text-blue-600 font-semibold" data-lang-prefix="modalProperty"></p>
+            <button onclick="closeModal()" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <!-- SELETTORE LINGUA -->
+        <div class="flex justify-end mb-4">
+            <div class="flex border border-gray-300 rounded-lg">
+                <button id="lang-it" class="lang-btn py-2 px-4 rounded-l-lg text-sm font-semibold transition-colors">Italiano</button>
+                <button id="lang-en" class="lang-btn py-2 px-4 rounded-r-lg text-sm font-semibold transition-colors">English</button>
+            </div>
+        </div>
+
+        <!-- SEZIONE 1: TITOLO E INTRODUZIONE -->
+        <div class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-blue-700 mb-3" data-lang="title"></h1>
+            <p class="text-lg text-gray-600" data-lang="subtitle"></p>
+        </div>
+        
+        <!-- SEZIONE 2: LABORATORIO INTERATTIVO -->
+        <div class="card">
+            <h2 class="text-2xl font-bold text-center mb-6" data-lang="interactiveLabTitle"></h2>
+            
+            <!-- Input DNA e Filamento Complementare -->
+            <div>
+                <label for="dna-input" class="block text-md font-medium text-gray-700 mb-2" data-lang="dnaInputLabel"></label>
+                <textarea id="dna-input" rows="4" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 font-mono text-lg uppercase tracking-widest" oninput="updateComplementaryStrand()"></textarea>
+                <div class="mt-2 p-3 bg-gray-100 rounded-lg">
+                    <p class="text-sm font-medium text-gray-600" data-lang="templateStrandLabel"></p>
+                    <p id="complementary-strand" class="font-mono text-gray-500 text-lg break-words"></p>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2 justify-center">
+                    <button id="insulin-btn" onclick="loadExample('insulin')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm" data-lang="insulinGene"></button>
+                    <button id="hemoglobin-btn" onclick="loadExample('hemoglobin')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm" data-lang="hemoglobinGene"></button>
+                    <button id="luciferase-btn" onclick="loadExample('luciferase')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm" data-lang="luciferaseGene"></button>
+                    <button id="gfp-btn" onclick="loadExample('gfp')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm" data-lang="gfpGene"></button>
+                    <button id="tp53-btn" onclick="loadExample('tp53')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm" data-lang="tp53Gene"></button>
+                    <button id="bacterial-btn" onclick="loadExample('bacterial')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm" data-lang="simpleGene"></button>
+                </div>
+            </div>
+
+            <!-- Laboratorio Mutazioni -->
+            <div class="mt-6 border-t pt-6">
+                 <h3 class="text-lg font-semibold text-center text-gray-800 mb-4" data-lang="mutationLabTitle"></h3>
+                 <p class="text-center text-gray-600 text-sm mb-4" data-lang="mutationLabSubtitle"></p>
+                 <div class="flex flex-wrap gap-3 justify-center">
+                     <button id="point-mutation-btn" onclick="applyMutation('point')" class="bg-yellow-500 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:bg-yellow-600 transition-colors" data-lang="pointMutation"></button>
+                     <button id="insertion-mutation-btn" onclick="applyMutation('insertion')" class="bg-green-500 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:bg-green-600 transition-colors" data-lang="insertionMutation"></button>
+                     <button id="deletion-mutation-btn" onclick="applyMutation('deletion')" class="bg-red-500 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:bg-red-600 transition-colors" data-lang="deletionMutation"></button>
+                 </div>
+            </div>
+
+            <!-- Controlli -->
+            <div class="mt-6 border-t pt-6">
+                <h3 class="text-lg font-semibold text-center text-gray-800 mb-4" data-lang="simulationTitle"></h3>
+                <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                    <button id="translate-btn" onclick="startTranslation()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 active:scale-95 transition-transform duration-150" data-lang="translateButton"></button>
+                    <button id="reset-btn" onclick="resetAll()" class="bg-gray-500 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-gray-600 active:scale-95 transition-transform duration-150" data-lang="resetButton"></button>
+                </div>
+                 <div class="mt-4 flex items-center justify-center gap-3">
+                     <label for="speed-slider" class="text-sm font-medium" data-lang="speedLabel"></label>
+                     <input type="range" id="speed-slider" min="100" max="1000" value="600" step="50" class="w-48">
+                 </div>
+            </div>
+
+            <!-- Risultati -->
+            <div id="results-container" class="mt-8 space-y-6 hidden">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <h3 class="text-xl font-semibold text-blue-800" data-lang="transcriptionStep"></h3>
+                    <p id="rna-output" class="font-mono text-blue-900 text-lg break-words mt-2 bg-white p-2 rounded"></p>
+                    <p id="transcription-note" class="text-xs text-gray-600 mt-2 italic" data-lang="transcriptionNote"></p>
+                </div>
+                <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+                    <h3 class="text-xl font-semibold text-purple-800" data-lang="translationStep"></h3>
+                    <div class="mt-4">
+                        <p class="font-semibold" data-lang="rnaToTranslate"></p>
+                        <div id="rna-codons-output" class="font-mono text-purple-900 text-lg break-words bg-white p-2 rounded"></div>
+                    </div>
+                    <div class="mt-4">
+                        <p class="font-semibold" data-lang="resultingProtein"></p>
+                        <p id="protein-output" class="text-red-700 text-base break-words bg-white p-2 rounded min-h-[50px] flex flex-wrap gap-x-2 items-center"></p>
+                    </div>
+                </div>
+                 <div id="message-box" class="p-4 rounded-r-lg hidden fade-in">
+                      <p id="message-text" class="font-medium"></p>
+                 </div>
+            </div>
+        </div>
+        
+        <!-- SEZIONE 4: ENCICLOPEDIA -->
+        <div class="card">
+            <h2 class="text-2xl font-bold text-center mb-6" data-lang="encyclopediaTitle"></h2>
+            <div id="codon-table" class="grid grid-cols-4 md:grid-cols-8 gap-2 text-center text-sm"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="text-center py-8 px-4">
+        <div class="max-w-5xl mx-auto border-t pt-8">
+            <p class="text-gray-600 text-sm" data-lang="copyright"></p>
+            <p class="text-gray-500 text-xs mt-1" data-lang="educationalProject"></p>
+            <div class="mt-4">
+                <a href="https://buy.stripe.com/bJe14p50t7picZyapAdjO06" target="_blank" rel="noopener noreferrer" class="inline-block bg-cyan-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:bg-cyan-600 transition-all duration-300 transform hover:scale-105" data-lang="donationButton"></a>
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        // --- DIZIONARI E DATI ---
+        let currentLanguage = 'it';
+
+        const languageStrings = {
+            title: { it: "Laboratorio di Genetica Molecolare", en: "Molecular Genetics Laboratory" },
+            subtitle: { it: "Dal DNA alla proteina, con uno sguardo alle mutazioni genetiche.", en: "From DNA to protein, with a look at genetic mutations." },
+            interactiveLabTitle: { it: "🔬 Laboratorio Interattivo", en: "🔬 Interactive Laboratory" },
+            dnaInputLabel: { it: "1. Inserisci una sequenza di DNA (Filamento Codificante 5'-3'):", en: "1. Enter a DNA sequence (Coding Strand 5'-3'):" },
+            dnaInputPlaceholder: { it: "Es: ATGCAG... Inizia con un codone di start (ATG)", en: "E.g.: ATGCAG... Start with a start codon (ATG)" },
+            templateStrandLabel: { it: "Filamento Stampo (Complementare 3'-5'):", en: "Template Strand (Complementary 3'-5'):" },
+            insulinGene: { it: "Gene Insulina", en: "Insulin Gene" },
+            hemoglobinGene: { it: "Gene Emoglobina", en: "Hemoglobin Gene" },
+            luciferaseGene: { it: "Gene Luciferasi", en: "Luciferase Gene" },
+            gfpGene: { it: "Gene GFP", en: "GFP Gene" },
+            tp53Gene: { it: "Gene TP53", en: "TP53 Gene" },
+            simpleGene: { it: "Gene Semplice", en: "Simple Gene" },
+            mutationLabTitle: { it: "2. Laboratorio Mutazioni", en: "2. Mutation Laboratory" },
+            mutationLabSubtitle: { it: "Introduci una mutazione casuale nella sequenza di DNA per vederne l'effetto.", en: "Introduce a random mutation into the DNA sequence to see the effect." },
+            pointMutation: { it: "Puntiforme", en: "Point" },
+            insertionMutation: { it: "Inserzione", en: "Insertion" },
+            deletionMutation: { it: "Delezione", en: "Deletion" },
+            simulationTitle: { it: "3. Esegui Simulazione", en: "3. Run Simulation" },
+            translateButton: { it: "▶️ Traduci e Anima", en: "▶️ Translate & Animate" },
+            resetButton: { it: "🔄 Reset", en: "🔄 Reset" },
+            speedLabel: { it: "Velocità:", en: "Speed:" },
+            transcriptionStep: { it: "Passo 1: Trascrizione (DNA → mRNA)", en: "Step 1: Transcription (DNA → mRNA)" },
+            transcriptionNote: { it: "Nota: L'mRNA è identico al filamento codificante del DNA, con l'Uracile (U) al posto della Timina (T).", en: "Note: The mRNA is identical to the DNA coding strand, with Uracil (U) instead of Thymine (T)." },
+            translationStep: { it: "Passo 2: Traduzione (mRNA → Proteina)", en: "Step 2: Translation (mRNA → Protein)" },
+            rnaToTranslate: { it: "mRNA da Tradurre:", en: "mRNA to Translate:" },
+            resultingProtein: { it: "Proteina Risultante (clicca su un amminoacido):", en: "Resulting Protein (click on an amino acid):" },
+            encyclopediaTitle: { it: "📖 Enciclopedia Genetica", en: "📖 Genetic Encyclopedia" },
+            copyright: { it: "&copy; 2024 Nicola Nicolaci. Tutti i diritti riservati.", en: "&copy; 2024 Nicola Nicolaci. All rights reserved." },
+            educationalProject: { it: "Progetto interattivo realizzato per uso didattico.", en: "Interactive project for educational use." },
+            donationButton: { it: "Sostieni il progetto con una donazione", en: "Support the project with a donation" },
+            modalAbbr: { it: "Abbreviazione:", en: "Abbreviation:" },
+            modalProperty: { it: "Proprietà:", en: "Property:" },
+            errorEnterDna: { it: "Per favore, inserisci una sequenza di DNA valida.", en: "Please enter a valid DNA sequence." },
+            errorNoStartCodon: { it: "Nessun codone di inizio (AUG) trovato. La traduzione non può iniziare.", en: "No start codon (AUG) found. Translation cannot begin." },
+            errorMutationNoDna: { it: "Inserisci una sequenza di DNA prima di applicare una mutazione.", en: "Enter a DNA sequence before applying a mutation." },
+            successPointMutation: { it: "Mutazione Puntiforme: La base '{originalBase}' alla posizione {index} è stata sostituita con '{newBase}'.", en: "Point Mutation: The base '{originalBase}' at position {index} has been replaced with '{newBase}'." },
+            successInsertion: { it: "Inserzione: La base '{newBase}' è stata inserita alla posizione {index}.", en: "Insertion: The base '{newBase}' has been inserted at position {index}." },
+            successDeletion: { it: "Delezione: La base '{deletedBase}' alla posizione {index} è stata rimossa.", en: "Deletion: The base '{deletedBase}' at position {index} has been removed." },
+            startNote: { it: "(INIZIO)", en: "(START)"},
+            stopNote: { it: "STOP", en: "STOP"}
+        };
+
+        const codonTableData = {
+            'UUU': 'Phe', 'UUC': 'Phe', 'UUA': 'Leu', 'UUG': 'Leu', 'UCU': 'Ser', 'UCC': 'Ser', 'UCA': 'Ser', 'UCG': 'Ser',
+            'UAU': 'Tyr', 'UAC': 'Tyr', 'UAA': 'STOP', 'UAG': 'STOP', 'UGU': 'Cys', 'UGC': 'Cys', 'UGA': 'STOP', 'UGG': 'Trp',
+            'CUU': 'Leu', 'CUC': 'Leu', 'CUA': 'Leu', 'CUG': 'Leu', 'CCU': 'Pro', 'CCC': 'Pro', 'CCA': 'Pro', 'CCG': 'Pro',
+            'CAU': 'His', 'CAC': 'His', 'CAA': 'Gln', 'CAG': 'Gln', 'CGU': 'Arg', 'CGC': 'Arg', 'CGA': 'Arg', 'CGG': 'Arg',
+            'AUU': 'Ile', 'AUC': 'Ile', 'AUA': 'Ile', 'AUG': 'Met (START)', 'ACU': 'Thr', 'ACC': 'Thr', 'ACA': 'Thr', 'ACG': 'Thr',
+            'AAU': 'Asn', 'AAC': 'Asn', 'AAA': 'Lys', 'AAG': 'Lys', 'AGU': 'Ser', 'AGC': 'Ser', 'AGA': 'Arg', 'AGG': 'Arg',
+            'GUU': 'Val', 'GUC': 'Val', 'GUA': 'Val', 'GUG': 'Val', 'GCU': 'Ala', 'GCC': 'Ala', 'GCA': 'Ala', 'GCG': 'Ala',
+            'GAU': 'Asp', 'GAC': 'Asp', 'GAA': 'Glu', 'GAG': 'Glu', 'GGU': 'Gly', 'GGC': 'Gly', 'GGA': 'Gly', 'GGG': 'Gly',
+        };
+
+        const aminoAcidInfo = {
+            'Phe': { name: {it: 'Fenilalanina', en: 'Phenylalanine'}, property: {it: 'Non-polare, aromatico', en: 'Non-polar, aromatic'} },
+            'Leu': { name: {it: 'Leucina', en: 'Leucine'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} },
+            'Ser': { name: {it: 'Serina', en: 'Serine'}, property: {it: 'Polare, neutro', en: 'Polar, neutral'} },
+            'Tyr': { name: {it: 'Tirosina', en: 'Tyrosine'}, property: {it: 'Polare, aromatico', en: 'Polar, aromatic'} },
+            'Cys': { name: {it: 'Cisteina', en: 'Cysteine'}, property: {it: 'Polare, neutro', en: 'Polar, neutral'} },
+            'Trp': { name: {it: 'Triptofano', en: 'Tryptophan'}, property: {it: 'Non-polare, aromatico', en: 'Non-polar, aromatic'} },
+            'Pro': { name: {it: 'Prolina', en: 'Proline'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} },
+            'His': { name: {it: 'Istidina', en: 'Histidine'}, property: {it: 'Carico positivamente, basico', en: 'Positively charged, basic'} },
+            'Gln': { name: {it: 'Glutammina', en: 'Glutamine'}, property: {it: 'Polare, neutro', en: 'Polar, neutral'} },
+            'Arg': { name: {it: 'Arginina', en: 'Arginine'}, property: {it: 'Carico positivamente, basico', en: 'Positively charged, basic'} },
+            'Ile': { name: {it: 'Isoleucina', en: 'Isoleucine'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} },
+            'Met': { name: {it: 'Metionina', en: 'Methionine'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} },
+            'Thr': { name: {it: 'Treonina', en: 'Threonine'}, property: {it: 'Polare, neutro', en: 'Polar, neutral'} },
+            'Asn': { name: {it: 'Asparagina', en: 'Asparagine'}, property: {it: 'Polare, neutro', en: 'Polar, neutral'} },
+            'Lys': { name: {it: 'Lisina', en: 'Lysine'}, property: {it: 'Carico positivamente, basico', en: 'Positively charged, basic'} },
+            'Val': { name: {it: 'Valina', en: 'Valine'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} },
+            'Ala': { name: {it: 'Alanina', en: 'Alanine'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} },
+            'Asp': { name: {it: 'Acido Aspartico', en: 'Aspartic Acid'}, property: {it: 'Carico negativamente, acido', en: 'Negatively charged, acidic'} },
+            'Glu': { name: {it: 'Acido Glutammico', en: 'Glutamic Acid'}, property: {it: 'Carico negativamente, acido', en: 'Negatively charged, acidic'} },
+            'Gly': { name: {it: 'Glicina', en: 'Glycine'}, property: {it: 'Non-polare, alifatico', en: 'Non-polar, aliphatic'} }
+        };
+
+        const dnaExamples = {
+            'insulin': 'AGCCCTCCAGGACAGGCTGCATCAGAAGAGGCCATCAAGCAGATCACTGTCCTTCTGCCATGGCCCTGTGGATGCGCCTCCTGCCCCTGCTGGCGCTGCTGGCCCTCTGGGGACCTGACCCAGCCGCAGCCTTTGTGAACCAACACCTGTGCGGCTCACACCTGGTGGAAGCTCTCTACCTAGTGTGCGGGGAACGAGGCTTCTTCTACACACCCAAGACCCGCCGGGAGGCAGAGGACCTGCAGGTGGGGCAGGTGGAGCTGGGCGGGGGCCCTGGTGCAGGCAGCCTGCAGCCCTTGGCCCTGGAGGGGTCCCTGCAGAAGCGTGGCATTGTGGAACAATGCTGTACCAGCATCTGCTCCCTCTACCAGCTGGAGAACTACTGCAACTAG',
+            'hemoglobin': 'ATGGTGCATCTGACTCCTGAGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAACGTGGATGAAGTTGGTGGTGAGGCCCTGGGCAGGCTGCTGGTGGTCTACCCTTGGACCCAGAGGTTCTTTGAGTCCTTTGGGGATCTGTCCACTCCTGATGCTGTTATGGGCAACCCTAAGGTGAAGGCTCATGGCAAGAAAGTGCTCGGTGCCTTTAGTGATGGCCTGGCTCACCTGGACAACCTCAAGGGCACCTTTGCCACACTGAGTGAGCTGCACTGTGACAAGCTGCACGTGGATCCTGAGAACTTCAGGCTCCTGGGCAACGTGCTGGTCTGTGTGCTGGCCCATCACTTTGGCAAAGAATTCACCCCACCAGTGCAGGCTGCCTATCAGAAAGTGGTGGCTGGTGTGGCTAATGCCCTGGCCCACAAGTATCACTAA',
+            'luciferase': 'ATGGAAGACGCCAAAAACATAAAGAAAGGCCTCGGTGCCGCTTTCTCTTCTCTTCATCGCCGTAGCCGCTGGAGAGCAACTGCACCGCCGGCATGTACGCCCGTGACTTCGACATCTCCGCTGACGGCTCCGGCGGCCCGGGCATGGACATTGCCGGCGACTCCGCTGCCGGCGCCGTCGTCAACTCCGACACCTACAGCACCCAGAGCTCGCTGGTGCACCGCGACTTCGAGGGCGTGCCGCTGGCCCCCGACGACTCCGACGACGCCCCCGCCGACGCCTTCGTCCGCGAGGTGAAGGCCATGAAGCGCTACGGCTGCACCGGCGAGCTGCTGTGCCTGGGCAGCCCCGGCGAGATCCCCGGCATCCGCGCCGGCACCGCCAACATCATCAAGGAGTTCATGCGCCTGAGCGTGGACATCGCCGAGAGCTACGACGAGCACGACGAGGCCCTGAAGGACCTGACCGGCAAGACCCTGGCCCCCGCCGAGCTGGAGATCATCCGCCAGGGCATCCGCGAGCGCATCGAGCGCAACGGCATCGCCGACTTCATCCCCGAGAGCGACGGACTGCTGGGCGTGGTGGTGGCCGACGAGTACGACGCCGAGGTGCGCCTGGCCTCCGCCGAGCAGCGCATCCCCGAGCGCTTCGACCGCGTGTCCGGCATGGCCGGCACCGACTTCATCCCCGAGGGCCTGGCCGGCATCGTGCCCGACAACTTCGACGCCTTCGTGTTCGGCAGCGTGACCGAGCTGAACGAGGCCATCAAGAAGATGGGCCACTGCTTCATCAACTTCGTGCGCGAGTTCGAGGGCCTGCACAGCGCCCTGAGCATCCCCGACATCTTCGGCGGCTTCGCCGGCACCTTCATCAGCTCCCGCCCCGGCATCGGCAAGACCGGCGAGCTGACCATCGAGATCATCCCCGACCTGACCGAGACCACCTTCTTCAGCGTGTGCGACTGCATCACCGAGAGCACCGGCACCGCCTGAGCGCCGGCGAGCTGATCCGCCCCGGCGAGCGCGCCGGCGTGAGCGCCGGCACCCCCATGGAGAGCGCCGGCAGCGCCGGCAGCGCCGGCGAGCGCGCCGAGCCCGGCGAGGTGGCCGAGGCCGGCGCCGTGCGCGTGTACGACGAGCACGCCGAGGCCGAGACCACCGTGCTGCTGAGCACCCAGACCATCAGCAAGGAGGGCATCGTGCTGACCGACTTCGAGGACGTGGCCCTGCCCGACAGCGACCTGAGCGCCGCCCGCACCAGCGTGGACGCCATCGTGCCCGACCCCGACATCGAGAGCGGCATCGCCGACGCCGTGGACGCCGAGTACCGCCACGCCGGCACCGACGCCGGCACCGAGCTGAGCGTGAGCGAGATCGAGGAAGAGATCGGCGTGGCCGGCTAA',
+            'gfp': 'ATGAGTAAAGGAGAAGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCACAAATTTTCTGTCAGTGGAGAGGGTGAAGGTGATGCAACATACGGAAAACTTACCCTTAAATTTATTTGCACTACTGGAAAACTACCTGTTCCATGGCCAACACTTGTCACTACTTTCTCTTATGGTGTTCAATGCTTTTCCCGTTATCCGGATCATATGAAACGGCATGACTTTTTCAAGAGTGCCATGCCCGAAGGTTATGTACAGGAACGCACTATATCTTTCAAAGATGACGGGAACTACAAGACGCGTGCTGAAGTCAAGTTTGAAGGTGATACCCTTGTTAATCGTATCGAGTTAAAAGGTATTGATTTTAAAGAAGATGGAAACATTCTCGGACACAAACTCGAGTACAACTATAACTCACACAATGTATACATCACGGCAGACAAACAAAAGAATGGAATCAAAGTTAACTTCAAAATTCGCCACAACATTGAAGATGGATCCGTTCAACTAGCAGACCATTATCAACAAAATACTCCAATTGGCGATGGCCCTGTCCTTTTACCAGACAACCATTACCTGTCCACACAATCTGCCCTTTCGAAAGATCCCAACGAAAAGCGTGACCACATGGTCCTTCTTGAGTTTGTAACTGCTGCTGGGATTACACATGGCATGGATGAGCTCTACAAATAA',
+            'tp53': 'ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGAGTCAGGAAACATTTTCAGACCTATGGAAACTACTTCCTGAAAACAACGTTCTGTCCCCCTTGCCGTCCCAAGCAATGGATGATTTGATGCTGTCCCCGGACGATATTGAACAATGGTTCACTGAAGACCCAGGTCCAGATGAAGCTCCCAGAATGCCAGAGGCTGCTCCCCCCGTGGCCCCTGCACCAGCAGCTCCTACACCGGCGGCCCCTGCACCAGCCCCCTCCTGGCCCCTGTCATCTTCTGTCCCTTCCCAGAAAACCTACCAGGGCAGCTACGGTTTCCGTCTGGGCTTCTTGCATTCTGGGACAGCCAAGTCTGTGACTTGCACGTACTCCCCTGCCCTCAACAAGATGTTTTGCCAACTGGCCAAGACCTGCCCTGTGCAGCTGTGGGTTGATTCCACACCCCCGCCCGGCACCCGCGTCCGCGCCATGGCCATCTACAAGCAGTCACAGCACATGACGGAGGTTGTGAGGCGCTGCCCCCACCATGAGCGCTGCTCAGATAGCGATGGTCTGGCCCCTCCTCAGCATCTTATCCGAGTGGAAGGAAATTTGCGTGTGGAGTATTTGGATGACAGAAACACTTTTCGACATAGTGTGGTGGTGCCCTATGAGCCGCCTGAGGTTGGCTCTGACTGTACCACCATCCACTACAACTACATGTGTAACAGTTCCTGCATGGGCGGCATGAACCGGAGGCCCATCCTCACCATCATCACACTGGAAGACTCCAGTGGTAATCTACTGGGACGGAACAGCTTTGAGGTGCGTGTTTGTGCCTGTCCTGGGAGAGACCGGCGCACAGAGGAAGAGAATCTCCGCAAGAAAGGGGAGCCTCACCACGAGCTGCCCCCAGGGAGCACTAAGCGAGCACTGCCCAACAACACCAGCTCCTCTCCCCAGCCAAAGAAGAAACCACTGGATGGAGAATATTTCACCCTTCAGATCCGTGGGCGTGAGCGCTTCGAGATGTTCCGAGAGCTGAATGAGGCCTGGAACTCAAGGATGCCCAGGCTGGGAAGGAGCCAGGGGGGAGCAGGGCTCACTCCAGCCACCTGAAGTCCAAAAAGGGTCAGTCTACCTCCCGCCATAAAAAACTCATGTTCAAGACAGAAGGGCCTGACTCAGACTGACATTCTCCACTTCTTGTCCCCACTCCCACCTTCCCCAACCCCGTCCCTTTCCTTGGAAACAACTGCCCTCTGGGACTTTCCTGTCCCCACCATCAGCACCCAGAGGCAGGCCTCTGGCATCTGGGACTGGGGGCCCGGACCCCGCCCCTCCTCCCCCTCCGCCCCCAGCTCTGTGACTGCTTGTAGGTAG',
+            'bacterial': 'ATGAAAAAATTAGCGATTGCAATTGTTGGCGCGGCAACCGCTGACGCAAAAACGTCTGGCGCTGATGGAAATGCCGCTGAAAGCGGAAGATGCGTTGATGCAGATGAAATCGCAAACATTACCGGCGGTCACGCGAACTATCCGAAAGCGGAAATCGAACTGATCGAAAAAGAAACGCAGCCGGCAGCGTTATCCGGCAGCGGTGGCGGCGTTTTACCGGCAACCGCAACCGGATCTGACCGTTAAATAA'
+        };
+
+        let animationInterval = null;
+        const controlButtonIds = [
+            'insulin-btn', 'hemoglobin-btn', 'bacterial-btn',
+            'luciferase-btn', 'gfp-btn', 'tp53-btn',
+            'point-mutation-btn', 'insertion-mutation-btn', 'deletion-mutation-btn',
+            'translate-btn', 'reset-btn'
+        ];
+
+        // --- FUNZIONI DI GESTIONE LINGUA ---
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            document.documentElement.lang = lang;
+
+            // Aggiorna tutti gli elementi con l'attributo data-lang
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if (languageStrings[key]) {
+                    el.innerHTML = languageStrings[key][currentLanguage];
+                }
+            });
+
+            // Aggiorna il placeholder del textarea
+            const dnaInput = document.getElementById('dna-input');
+            if (dnaInput) {
+                dnaInput.placeholder = languageStrings.dnaInputPlaceholder[currentLanguage];
+            }
+            
+            // Aggiorna la tabella dei codoni
+            populateCodonTable();
+
+            // Aggiorna i bottoni attivi
+            document.getElementById('lang-it').classList.toggle('active', lang === 'it');
+            document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+        }
+
+        // --- FUNZIONI DI INIZIALIZZAZIONE E UI ---
+        
+        function populateCodonTable() {
+            const table = document.getElementById('codon-table');
+            table.innerHTML = '';
+            const sortedCodons = Object.keys(codonTableData).sort();
+            sortedCodons.forEach(codon => {
+                let aminoAcid = codonTableData[codon];
+                
+                if (aminoAcid.includes('(START)')) {
+                    aminoAcid = aminoAcid.replace('(START)', languageStrings.startNote[currentLanguage]);
+                } else if (aminoAcid === 'STOP') {
+                    aminoAcid = languageStrings.stopNote[currentLanguage];
+                }
+
+                const cell = document.createElement('div');
+                cell.id = `codon-table-${codon}`;
+                cell.className = 'p-2 border rounded-md shadow-sm codon-table-cell';
+                cell.innerHTML = `<div class="font-mono font-bold">${codon}</div><div class="text-xs text-gray-600">${aminoAcid}</div>`;
+                
+                if(codonTableData[codon].includes('STOP')) cell.classList.add('bg-red-100');
+                if(codonTableData[codon].includes('START')) cell.classList.add('bg-green-100');
+                table.appendChild(cell);
+            });
+        }
+        
+        function loadExample(type) {
+            document.getElementById('dna-input').value = dnaExamples[type];
+            updateComplementaryStrand();
+            resetResults();
+        }
+
+        function resetAll() {
+            clearInterval(animationInterval);
+            document.getElementById('dna-input').value = '';
+            updateComplementaryStrand();
+            resetResults();
+            enableControls();
+        }
+        
+        function resetResults() {
+            clearInterval(animationInterval);
+            document.getElementById('results-container').classList.add('hidden');
+            hideMessage();
+            document.getElementById('rna-output').textContent = '';
+            document.getElementById('rna-codons-output').innerHTML = '';
+            document.getElementById('protein-output').innerHTML = '';
+            document.querySelectorAll('.codon-table-highlight').forEach(el => el.classList.remove('codon-table-highlight'));
+            enableControls();
+        }
+
+        function updateComplementaryStrand() {
+            const dnaInput = document.getElementById('dna-input').value.toUpperCase().replace(/[^ACGT]/g, '');
+            const complement = dnaInput.split('').map(base => ({'A':'T', 'T':'A', 'C':'G', 'G':'C'}[base])).join('');
+            document.getElementById('complementary-strand').textContent = complement;
+        }
+
+        function disableControls() {
+            controlButtonIds.forEach(id => document.getElementById(id).disabled = true);
+        }
+
+        function enableControls() {
+            controlButtonIds.forEach(id => document.getElementById(id).disabled = false);
+        }
+
+        function showMessage(textKey, type = 'info', replacements = {}) {
+            const messageBox = document.getElementById('message-box');
+            const messageText = document.getElementById('message-text');
+            
+            let text = languageStrings[textKey] ? languageStrings[textKey][currentLanguage] : 'Messaggio non trovato';
+            for (const key in replacements) {
+                text = text.replace(`{${key}}`, replacements[key]);
+            }
+
+            messageBox.className = 'p-4 rounded-r-lg fade-in'; // Reset classes
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'border-l-4', 'border-red-500');
+                messageText.className = 'text-red-900 font-medium';
+            } else if (type === 'success') {
+                 messageBox.classList.add('bg-green-100', 'border-l-4', 'border-green-500');
+                messageText.className = 'text-green-900 font-medium';
+            } else { // info
+                messageBox.classList.add('bg-yellow-100', 'border-l-4', 'border-yellow-500');
+                messageText.className = 'text-yellow-900 font-medium';
+            }
+
+            messageText.textContent = text;
+            messageBox.classList.remove('hidden');
+        }
+
+        function hideMessage() {
+            document.getElementById('message-box').classList.add('hidden');
+        }
+
+
+        // --- FUNZIONI DI MUTAZIONE ---
+        function applyMutation(type) {
+            const dnaInput = document.getElementById('dna-input');
+            let dna = dnaInput.value.toUpperCase().replace(/[^ACGT]/g, '');
+            if (dna.length === 0) {
+                showMessage('errorMutationNoDna', 'error');
+                return;
+            };
+
+            const index = Math.floor(Math.random() * dna.length);
+            const bases = ['A', 'C', 'G', 'T'];
+            
+            if (type === 'point') {
+                const originalBase = dna[index];
+                let newBase;
+                do {
+                    newBase = bases[Math.floor(Math.random() * 4)];
+                } while (newBase === originalBase);
+                dna = dna.substring(0, index) + newBase + dna.substring(index + 1);
+                showMessage('successPointMutation', 'success', { originalBase, newBase, index: index + 1 });
+            } else if (type === 'insertion') {
+                const newBase = bases[Math.floor(Math.random() * 4)];
+                dna = dna.substring(0, index) + newBase + dna.substring(index);
+                showMessage('successInsertion', 'success', { newBase, index: index + 1 });
+            } else if (type === 'deletion') {
+                if (dna.length > 1) {
+                    const deletedBase = dna[index];
+                    dna = dna.substring(0, index) + dna.substring(index + 1);
+                    showMessage('successDeletion', 'success', { deletedBase, index: index + 1 });
+                }
+            }
+            dnaInput.value = dna;
+            updateComplementaryStrand();
+        }
+
+        // --- FUNZIONE PRINCIPALE DI TRADUZIONE E ANIMAZIONE ---
+        function startTranslation() {
+            resetResults();
+            const dnaInput = document.getElementById('dna-input').value.toUpperCase().replace(/[^ACGT]/g, '');
+            const resultsContainer = document.getElementById('results-container');
+            
+            if (dnaInput.length === 0) {
+                showMessage('errorEnterDna', 'error');
+                resultsContainer.classList.remove('hidden');
+                return;
+            }
+            
+            disableControls();
+
+            const rna = dnaInput.replace(/T/g, 'U');
+            document.getElementById('rna-output').textContent = rna;
+            
+            const startIndex = rna.indexOf('AUG');
+            if (startIndex === -1) {
+                showMessage('errorNoStartCodon', 'error');
+                resultsContainer.classList.remove('hidden');
+                enableControls();
+                return;
+            }
+
+            const translatableRna = rna.substring(startIndex);
+            const codons = [];
+            for (let i = 0; i < translatableRna.length; i += 3) {
+                if (translatableRna.substring(i, i + 3).length === 3) {
+                    codons.push(translatableRna.substring(i, i + 3));
+                }
+            }
+            
+            document.getElementById('rna-codons-output').innerHTML = codons.map((codon, index) => `<span id="codon-${index}">${codon}</span>`).join(' ');
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.classList.add('fade-in');
+
+            let codonIndex = 0;
+            const proteinOutput = document.getElementById('protein-output');
+            const speed = 1100 - document.getElementById('speed-slider').value; 
+
+            animationInterval = setInterval(() => {
+                if (codonIndex > 0) {
+                    document.getElementById(`codon-${codonIndex - 1}`).classList.remove('codon-highlight');
+                    const prevCodon = codons[codonIndex - 1];
+                    document.getElementById(`codon-table-${prevCodon}`)?.classList.remove('codon-table-highlight');
+                }
+
+                if (codonIndex >= codons.length) {
+                    clearInterval(animationInterval);
+                    enableControls();
+                    return;
+                }
+
+                const currentCodon = codons[codonIndex];
+                let aminoAcid = codonTableData[currentCodon] || '?';
+                
+                document.getElementById(`codon-${codonIndex}`).classList.add('codon-highlight');
+                const tableCell = document.getElementById(`codon-table-${currentCodon}`);
+                if(tableCell) {
+                    tableCell.classList.add('codon-table-highlight');
+                    tableCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                if (aminoAcid !== 'STOP') {
+                    const aaAbbr = aminoAcid.replace(' (START)', '');
+                    const aaSpan = document.createElement('span');
+                    aaSpan.textContent = aaAbbr;
+                    aaSpan.className = 'protein-amino-acid';
+                    aaSpan.onclick = () => showAminoAcidInfo(aaAbbr);
+                    
+                    const separator = document.createElement('span');
+                    separator.textContent = (proteinOutput.children.length > 0) ? '-' : '';
+                    separator.className = 'text-gray-400';
+                    
+                    if (proteinOutput.children.length > 0) proteinOutput.appendChild(separator);
+                    proteinOutput.appendChild(aaSpan);
+                }
+
+                if (aminoAcid.includes('STOP')) {
+                    const stopSpan = document.createElement('span');
+                    stopSpan.textContent = `■ ${languageStrings.stopNote[currentLanguage]}`;
+                    stopSpan.className = 'font-bold text-red-500 ml-2';
+                    proteinOutput.appendChild(stopSpan);
+                    clearInterval(animationInterval);
+                    enableControls();
+                    return;
+                }
+
+                codonIndex++;
+
+            }, speed);
+        }
+
+        // --- FUNZIONI MODAL AMMINOACIDI ---
+        function showAminoAcidInfo(abbr) {
+            const info = aminoAcidInfo[abbr];
+            if (!info) return;
+            document.getElementById('modal-title').textContent = info.name[currentLanguage];
+            document.getElementById('modal-abbr').textContent = `${languageStrings.modalAbbr[currentLanguage]} ${abbr}`;
+            document.getElementById('modal-property').textContent = `${languageStrings.modalProperty[currentLanguage]} ${info.property[currentLanguage]}`;
+            document.getElementById('amino-acid-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('amino-acid-modal').classList.add('hidden');
+        }
+        
+        // --- INIZIALIZZAZIONE ---
+        window.onload = () => {
+            document.getElementById('lang-it').addEventListener('click', () => setLanguage('it'));
+            document.getElementById('lang-en').addEventListener('click', () => setLanguage('en'));
+            
+            setLanguage('it'); // Imposta la lingua predefinita
+            updateComplementaryStrand();
+        };
+
+    </script>
+</body>
+</html>
